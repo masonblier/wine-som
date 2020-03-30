@@ -1,8 +1,10 @@
+extern crate clap;
 extern crate csv;
 extern crate ndarray;
 extern crate ndarray_csv;
 extern crate rusticsom;
 
+use clap::{App};
 use csv::{ReaderBuilder};
 use ndarray::prelude::*;
 use ndarray_csv::{Array2Reader};
@@ -10,7 +12,6 @@ use rusticsom::*;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs::File;
-use std::env;
 
 /// number of iterations to run the som trainer
 const TRAINING_ITERATIONS: u32 = 1000;
@@ -22,14 +23,17 @@ const SOM_DEPTH: usize = 4;
 
 /// application entry point
 fn main() -> Result<(), Box<dyn Error>> {
-    // get input file path from command line argument
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 2 {
-        println!("Usage: `cargo run path/to/winequality-red.csv`");
-        println!("  file must be specified");
-        return Ok(());
-    }
-    let filename = &args[1];
+    // get command line argument with clap
+    let matches = App::new("wine-som")
+        .version("0.0.2")
+        .about("Uses rustic-som crate to visualize SOM for winequality-red dataset")
+        .args_from_usage(
+            "--html 'Toggles output as HTML code for visual display'
+            <INPUT>              'Sets the path to the winequality-red.csv data file'
+            -v...                'Sets the level of verbosity'")
+        .get_matches();
+    let filename = matches.value_of("INPUT").unwrap();
+    let output_html = matches.occurrences_of("html") > 0;
 
     // read input csv into ndarray
     let file = File::open(filename)?;
@@ -71,19 +75,42 @@ fn main() -> Result<(), Box<dyn Error>> {
     for w in 0..SOM_WIDTH {
         let mut row = mode_map.row_mut(w);
         for h in 0..SOM_HEIGHT {
-            row[h] = mcv(mean_map.get(&(w,h)).unwrap());           
+            row[h] = mcv(mean_map.get(&(w,h)).unwrap_or(&vec![0]));           
         }
     }
 
-
-    // prints the distance value for each cell in som
+    // gets distance_map of winner distances for each som cell
     let dist_map = som.distance_map();
-    println!("Distance Map:");
-    println!("{}", dist_map);
-    println!();
-    // prints the most frequent quality value related to som cell
-    println!("Most frequent quality value:");
-    println!("{}, ", mode_map);
+
+    if output_html {
+
+        // outputs html source for table graphic
+        println!("<html><body>");
+        println!("<style type=\"text/css\">td {{ width: 20px; height: 20px; text-align: center; }}</style>");
+        println!("<table>");
+        for w in 0..SOM_WIDTH {
+            println!("<tr>");
+            let dist_row = dist_map.row(w);
+            let mode_row = mode_map.row(w);
+            for h in 0..SOM_HEIGHT {       
+                println!("<td style=\"background: hsl(0,0%,{}%)\">{}</td>", dist_row[h] * 100.0, mode_row[h]);
+            }
+            println!("</tr>");
+        }
+        println!("</table>");
+        println!("</body></html>");
+
+    } else {
+
+        // prints the distance value for each cell in som
+        println!("Distance Map:");
+        println!("{}", dist_map);
+        println!();
+        // prints the most frequent quality value related to som cell
+        println!("Most frequent quality value:");
+        println!("{}, ", mode_map);
+
+    }
 
     // end
     Ok(())

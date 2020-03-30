@@ -1,7 +1,6 @@
-  
 [package]
 name = "wine-som"
-version = "0.0.1"
+version = "0.0.2"
 license = "MIT"
 description = "Example using rustic-som library on the winequality dataset"
 keywords = ["SOM", "ML", "self-organizing-map"]
@@ -10,6 +9,7 @@ exclude = [".DS_Store"]
 edition = "2018"
 
 [dependencies]
+clap = "2.33.0"
 csv = "1.1.3"
 ndarray = "0.13.0"
 ndarray-csv = "0.4.1"
